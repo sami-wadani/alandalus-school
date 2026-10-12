@@ -1,0 +1,134 @@
+/* =========================================
+   STYLE.CSS - التصميم العام ومخطط الفصول
+   ========================================= */
+@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap');
+
+* { font-family: "Tajawal", sans-serif; }
+:root { --primary: rgb(50, 20, 109); --secondary: rgb(133, 50, 131); --bg: #f6f7fb; }
+body { background: var(--bg); color: #1f2937; overflow-x: hidden; } 
+
+.primary-bg { background: var(--primary) !important; color: white !important; }
+.primary-text { color: var(--primary) !important; }
+.card { background: white; border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,.04); border: 1px solid #f1f2f6; transition: all 0.25s ease; }
+
+.nav-btn { transition: .2s; }
+.nav-btn.active { background: rgba(255,255,255,.18); box-shadow: inset 0 -3px 0 white; }
+
+.level-badge { display: inline-flex; align-items: center; justify-content: center; gap: 4px; border-radius: 999px; font-weight: 700; white-space: nowrap; padding: 2px 10px; font-size: 12px; }
+.level-1 { background: #fee2e2; color: #991b1b; }
+.level-2 { background: #ffedd5; color: #9a3412; }
+.level-3 { background: #fef9c3; color: #854d0e; }
+.level-4 { background: #dcfce7; color: #166534; }
+.level-5 { background: #dbeafe; color: #1e40af; }
+
+.border-seat-1 { border-color: #ef4444 !important; color: #ef4444; }
+.border-seat-2 { border-color: #f97316 !important; color: #f97316; }
+.border-seat-3 { border-color: #eab308 !important; color: #eab308; }
+.border-seat-4 { border-color: #22c55e !important; color: #22c55e; }
+.border-seat-5 { border-color: #3b82f6 !important; color: #3b82f6; }
+
+.action-btn { transition: 0.2s; cursor: pointer; border: none; outline: none; }
+.action-btn:hover { transform: scale(1.15); }
+.action-btn:active { transform: scale(0.9); }
+
+.btn-relative { position: relative; }
+@keyframes popIn { 0% { transform: scale(0); opacity: 0; } 50% { transform: scale(1.4); } 100% { transform: scale(1); opacity: 1; } }
+.badge-counter { position: absolute; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 900; color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.2); animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; border: 2px solid white; width: 22px; height: 22px; }
+.badge-green { background-color: #22c55e; }
+.badge-red { background-color: #ef4444; }
+
+/* المخطط الفراغي */
+.classroom-container { width: 100%; overflow-x: auto; overflow-y: hidden; padding-bottom: 20px; -webkit-overflow-scrolling: touch; display: flex; justify-content: flex-start; }
+@media (min-width: 1150px) { .classroom-container { justify-content: center; overflow-x: hidden; } }
+
+.classroom-layout { position: relative; width: 1100px; min-width: 1100px; height: 880px; background: white; border-radius: 24px; border: 2px dashed #e5e7eb; overflow: hidden; margin: 0 auto; }
+.board-shape { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); width: 280px; height: 50px; background: #60a5fa; border-radius: 12px; color: white; font-weight: 900; font-size: 18px; display: flex; align-items: center; justify-content: center; letter-spacing: 2px; }
+.door-shape { position: absolute; top: 20px; right: 20px; width: 60px; height: 60px; background: #60a5fa; border-radius: 12px; color: white; font-weight: 900; font-size: 14px; display: flex; align-items: center; justify-content: center; }
+
+.seat-pill { background: white; border: 2px solid; border-radius: 12px; padding: 4px; text-align: center; width: 100px; height: 46px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; position: relative; margin-bottom: 12px; }
+.seat-pill:hover { transform: scale(1.05) translateY(-2px); box-shadow: 0 6px 12px rgba(0,0,0,0.1); z-index: 10; }
+.seat-empty { border-color: #cbd5e1 !important; color: #94a3b8; border-style: dashed !important; height: 42px; margin-bottom: 0; }
+
+.xp-capsule { position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%); background: #fef08a; color: #854d0e; border: 1px solid #fde047; border-radius: 999px; font-size: 9px; font-weight: 900; padding: 2px 8px; white-space: nowrap; box-shadow: 0 2px 5px rgba(0,0,0,0.1); z-index: 5; pointer-events: none; }
+
+/* القائمة الجانبية للجوال */
+#mobileSidebar { position: fixed; top: 0; right: -100%; width: 280px; height: 100vh; background-color: var(--primary); z-index: 999; transition: right 0.3s ease-in-out; box-shadow: -5px 0 25px rgba(0,0,0,0.5); display: flex; flex-direction: column; }
+#mobileSidebar.open { right: 0; }
+#sidebarOverlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 998; display: none; backdrop-filter: blur(2px); }
+#sidebarOverlay.show { display: block; }
+.sidebar-link { display: block; padding: 15px 20px; color: rgba(255,255,255,0.8); font-weight: 700; border-bottom: 1px solid rgba(255,255,255,0.05); transition: 0.2s; }
+.sidebar-link:hover, .sidebar-link.active { background: rgba(255,255,255,0.1); color: white; padding-right: 25px; }
+
+@media (max-width: 1024px) { #adminNav, #teacherNav { display: none !important; } }
+.modal-bg { background: rgba(15,23,42,.6); backdrop-filter: blur(4px); }
+.hidden-section { display: none !important; }
+.table-wrap { overflow-x: auto; }
+table { min-width: 1100px; }
+.mini-subj { width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; font-size: 10px; font-weight: 900; }
+
+/* ==============================================
+   حل مشاكل الطباعة الجذري - النسخة المحصنة 100%
+   ============================================== */
+@media print { 
+  * { 
+      -webkit-print-color-adjust: exact !important; 
+      print-color-adjust: exact !important; 
+      transition: none !important;
+      animation: none !important;
+  }
+  
+  /* مقاس ورقة A4 بالعرض مع هوامش صفرية لمنع الصفحات الفارغة */
+  @page { size: A4 landscape; margin: 0; }
+  
+  html, body, main { 
+      background: white !important; 
+      margin: 0 !important; 
+      padding: 0 !important;
+      width: 100% !important;
+      height: 100% !important;
+      overflow: visible !important;
+  }
+  
+  /* إخفاء تام لكل ما لا يلزم طباعته */
+  header, nav, #loginScreen, #mobileSidebar, #sidebarOverlay, .no-print, .modal-bg { display: none !important; }
+  
+  .hidden-section { display: none !important; }
+  
+  .card { box-shadow: none !important; border: 1px solid #ccc !important; margin: 0 !important; padding: 10px !important; }
+  table { border-collapse: collapse !important; width: 100% !important; min-width: 100% !important; page-break-inside: auto; }
+  tr { page-break-inside: avoid; page-break-after: auto; }
+  th, td { border: 1px solid #ddd !important; padding: 4px !important; font-size: 12pt !important; }
+  .table-wrap { overflow: visible !important; width: 100% !important; }
+
+  /* الخريطة: الطباعة بحجمها الطبيعي 100% بدون أي Zoom لتجنب تخريب الـ Rotate */
+  .classroom-container { 
+      overflow: visible !important; 
+      display: flex !important; 
+      justify-content: center !important; 
+      padding: 0 !important; 
+      margin: 0 !important; 
+      width: 100% !important;
+  }
+  
+  .classroom-layout { 
+      width: 1100px !important; 
+      min-width: 1100px !important; 
+      height: 880px !important;
+      border: 2px solid black !important; 
+      margin: 0 auto !important; 
+      position: relative !important;
+      /* أزلنا الـ zoom والـ transform هنا */
+      transform: none !important;
+      zoom: 1 !important;
+  }
+  
+  /* إجبار المجموعات (Absolute) على الاحتفاظ بإحداثياتها والدوران (Rotate) في الطباعة */
+  .absolute { position: absolute !important; }
+  .classroom-layout > div.absolute {
+      /* إجبار المتصفح على طباعة الـ Transform كما هو في الشاشة */
+      -webkit-transform-style: preserve-3d !important;
+      transform-style: preserve-3d !important;
+  }
+
+  ::-webkit-scrollbar { display: none; }
+}
