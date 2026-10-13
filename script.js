@@ -1,5 +1,5 @@
 /* =========================================
-   SCRIPT.JS - النسخة المدرعة (مع كاسر الذاكرة المؤقتة وحماية البيانات)
+   SCRIPT.JS - النسخة المحدثة (إضافة زر الفصول للجوال)
    ========================================= */
 
 const firebaseConfig = {
@@ -111,6 +111,16 @@ window.toggleSidebar = function() {
     else { sidebar.classList.add('open'); overlay.classList.add('show'); }
 };
 
+// --- دالة جديدة لتبديل الفصول من الجوال ---
+window.syncMobileClassSelect = function(val) {
+    const deskSel = document.getElementById('teacherClassSelect');
+    if(deskSel) {
+        deskSel.value = val;
+        window.refreshActiveSection();
+        window.toggleSidebar(); // إغلاق القائمة الجانبية لتجربة مستخدم أفضل
+    }
+};
+
 window.populateSidebarMenu = function() {
     const menuContent = document.getElementById('sidebarMenuContent'); const roleDisplay = document.getElementById('sidebarRoleDisplay');
     if (currentRole === 'admin') {
@@ -118,7 +128,25 @@ window.populateSidebarMenu = function() {
         menuContent.innerHTML = `<a href="#" onclick="window.showSection('dashboard'); window.toggleSidebar();" class="sidebar-link active"><i class="fa-solid fa-chart-line ml-2 w-5"></i> الإدارة</a><a href="#" onclick="window.showSection('teachersAdmin'); window.toggleSidebar();" class="sidebar-link"><i class="fa-solid fa-users-gear ml-2 w-5"></i> المستخدمين</a><a href="#" onclick="window.showSection('seating'); window.toggleSidebar();" class="sidebar-link"><i class="fa-solid fa-chair ml-2 w-5"></i> الفصول</a><a href="#" onclick="window.showSection('academic'); window.toggleSidebar();" class="sidebar-link"><i class="fa-solid fa-chart-pie ml-2 w-5"></i> تقارير التقييم</a><a href="#" onclick="window.showSection('reports'); window.toggleSidebar();" class="sidebar-link"><i class="fa-solid fa-file-lines ml-2 w-5"></i> التقارير</a>`;
     } else if (currentRole === 'teacher') {
         roleDisplay.innerHTML = `<i class="fa-solid fa-chalkboard-user"></i> أستاذ/ة ${currentUser.name}`;
-        menuContent.innerHTML = `<a href="#" onclick="window.showSection('teacherDaily'); window.toggleSidebar();" class="sidebar-link active"><i class="fa-solid fa-list-check ml-2 w-5"></i> الكشف اليومي</a><a href="#" onclick="window.showSection('teacherMap'); window.toggleSidebar();" class="sidebar-link"><i class="fa-solid fa-map ml-2 w-5"></i> خريطة المجموعات</a><a href="#" onclick="window.showSection('teacherHonorRoll'); window.toggleSidebar();" class="sidebar-link"><i class="fa-solid fa-medal ml-2 w-5"></i> لوحة الشرف</a><a href="#" onclick="window.showSection('teacherAcademic'); window.toggleSidebar();" class="sidebar-link"><i class="fa-solid fa-graduation-cap ml-2 w-5"></i> التقييم الأكاديمي</a><a href="#" onclick="window.showSection('teacherFullReport'); window.toggleSidebar();" class="sidebar-link"><i class="fa-solid fa-file-signature ml-2 w-5"></i> التقرير الشامل</a>`;
+        
+        // --- بناء زر اختيار الفصل المخصص للجوال ---
+        let mobileClassSelect = '';
+        if (currentUser.classes && currentUser.classes.length > 0) {
+            const deskSel = document.getElementById('teacherClassSelect');
+            const currentVal = deskSel ? deskSel.value : '0';
+            const options = currentUser.classes.map((c, i) => `<option value="${i}" ${String(i)===String(currentVal)?'selected':''}>${c.grade} - ف${c.class}</option>`).join('');
+            
+            mobileClassSelect = `
+            <div class="mx-4 my-4 p-3 bg-purple-50 rounded-xl border border-purple-100">
+                <label class="text-xs font-black text-purple-800 mb-2 block"><i class="fa-solid fa-users-viewfinder"></i> تبديل الفصل الحالي:</label>
+                <select id="mobileTeacherClassSelect" onchange="window.syncMobileClassSelect(this.value)" class="w-full border-0 p-2 rounded-lg font-bold text-sm bg-white text-purple-900 outline-none shadow-sm cursor-pointer">
+                    ${options}
+                </select>
+            </div>
+            <hr class="border-gray-100 mb-2">`;
+        }
+
+        menuContent.innerHTML = mobileClassSelect + `<a href="#" onclick="window.showSection('teacherDaily'); window.toggleSidebar();" class="sidebar-link active"><i class="fa-solid fa-list-check ml-2 w-5"></i> الكشف اليومي</a><a href="#" onclick="window.showSection('teacherMap'); window.toggleSidebar();" class="sidebar-link"><i class="fa-solid fa-map ml-2 w-5"></i> خريطة المجموعات</a><a href="#" onclick="window.showSection('teacherHonorRoll'); window.toggleSidebar();" class="sidebar-link"><i class="fa-solid fa-medal ml-2 w-5"></i> لوحة الشرف</a><a href="#" onclick="window.showSection('teacherAcademic'); window.toggleSidebar();" class="sidebar-link"><i class="fa-solid fa-graduation-cap ml-2 w-5"></i> التقييم الأكاديمي</a><a href="#" onclick="window.showSection('teacherFullReport'); window.toggleSidebar();" class="sidebar-link"><i class="fa-solid fa-file-signature ml-2 w-5"></i> التقرير الشامل</a>`;
     }
 };
 
@@ -151,13 +179,27 @@ window.handleLogin = function() {
 };
 
 window.startApp = function() {
-  document.getElementById('loginScreen').classList.add('hidden'); document.getElementById('mainApp').classList.remove('hidden'); window.populateSidebarMenu();
-  if(currentRole === 'admin') { document.getElementById('adminNav').classList.remove('hidden'); document.getElementById('adminNav').classList.add('lg:flex'); window.showSection('dashboard'); } 
+  document.getElementById('loginScreen').classList.add('hidden'); document.getElementById('mainApp').classList.remove('hidden'); 
+  if(currentRole === 'admin') { 
+      document.getElementById('adminNav').classList.remove('hidden'); document.getElementById('adminNav').classList.add('lg:flex'); 
+      window.populateSidebarMenu();
+      window.showSection('dashboard'); 
+  } 
   else {
-    document.getElementById('teacherNav').classList.remove('hidden'); document.getElementById('teacherNav').classList.add('lg:flex');
-    const sel = document.getElementById('teacherClassSelect'); if(sel && currentUser.classes) { sel.innerHTML = currentUser.classes.map((c, i) => `<option value="${i}">${c.grade} - ف${c.class}</option>`).join(''); }
-    const d1 = document.getElementById('dailyDateInput'); if(d1) d1.value = selectedDailyDate; const d2 = document.getElementById('mapDateInput'); if(d2) d2.value = selectedDailyDate;
-    window.showSection('teacherDaily');
+      document.getElementById('teacherNav').classList.remove('hidden'); document.getElementById('teacherNav').classList.add('lg:flex');
+      const sel = document.getElementById('teacherClassSelect'); 
+      if(sel && currentUser.classes) { 
+          sel.innerHTML = currentUser.classes.map((c, i) => `<option value="${i}">${c.grade} - ف${c.class}</option>`).join(''); 
+          // مزامنة التغيير بين الجوال والكمبيوتر
+          sel.addEventListener('change', (e) => {
+              const mobSel = document.getElementById('mobileTeacherClassSelect');
+              if(mobSel) mobSel.value = e.target.value;
+              window.refreshActiveSection();
+          });
+      }
+      const d1 = document.getElementById('dailyDateInput'); if(d1) d1.value = selectedDailyDate; const d2 = document.getElementById('mapDateInput'); if(d2) d2.value = selectedDailyDate;
+      window.populateSidebarMenu(); // استدعاء بعد إعداد قائمة الديسكتوب
+      window.showSection('teacherDaily');
   }
 };
 
