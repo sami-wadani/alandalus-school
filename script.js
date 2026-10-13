@@ -1,5 +1,5 @@
 /* =========================================
-   SCRIPT.JS - محرك البيانات والمنطق السحابي (النسخة الاحترافية - مع شبكة الأمان)
+   SCRIPT.JS - النسخة المدرعة (مع كاسر الذاكرة المؤقتة وحماية البيانات)
    ========================================= */
 
 const firebaseConfig = {
@@ -23,9 +23,6 @@ let isDataLoaded = false;
 let selectedDailyDate = new Date().toISOString().split("T")[0];
 let currentRole = null; let currentUser = null; 
 
-// ==========================================
-// تعريف كل الدوال في نطاق Window بشكل صريح ومبكر
-// ==========================================
 window.sortArabicAlphabetically = function(a, b) {
     const nameA = a.name ? a.name.trim() : (a[1] && a[1].name ? a[1].name.trim() : "");
     const nameB = b.name ? b.name.trim() : (b[1] && b[1].name ? b[1].name.trim() : "");
@@ -43,20 +40,12 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 document.addEventListener('keypress', function (e) { if (e.key === 'Enter') window.handleLogin(); });
 
-// ==========================================
-// 🚀 المراقب اللحظي (مع شبكة الأمان لتنظيف الفجوات null)
-// ==========================================
 database.ref('/').on('value', (snapshot) => {
     const data = snapshot.val() || {};
     
-    // دالة تنظيف الكائنات من الفجوات (Safety Net)
     const cleanObj = (obj) => {
         let res = {};
-        if (obj) {
-            Object.keys(obj).forEach(k => {
-                if (obj[k] !== null && obj[k] !== undefined) res[k] = obj[k];
-            });
-        }
+        if (obj) { Object.keys(obj).forEach(k => { if (obj[k] !== null && obj[k] !== undefined) res[k] = obj[k]; }); }
         return res;
     };
 
@@ -67,7 +56,6 @@ database.ref('/').on('value', (snapshot) => {
     teachersData = cleanObj(data.teachers);
     settingsData = data.settings || { groups: {1:"المجموعة 1", 2:"المجموعة 2", 3:"المجموعة 3", 4:"المجموعة 4", 5:"المجموعة 5"} };
 
-    // تنظيف السجلات اليومية (السبب الرئيسي للعطل السابق)
     const rawDaily = data.daily || {};
     dailyRecords = Object.keys(rawDaily).map(k => rawDaily[k]).filter(r => r !== null && r !== undefined);
 
@@ -77,13 +65,10 @@ database.ref('/').on('value', (snapshot) => {
     });
 
     isDataLoaded = true;
-    
     const loginBtn = document.getElementById('loginBtn');
     if(loginBtn && loginBtn.disabled) {
-        loginBtn.textContent = "دخول للمنصة";
-        loginBtn.disabled = false;
-        loginBtn.classList.remove('bg-gray-400', 'opacity-50', 'cursor-not-allowed');
-        loginBtn.classList.add('primary-bg', 'hover:opacity-90');
+        loginBtn.textContent = "دخول للمنصة"; loginBtn.disabled = false;
+        loginBtn.classList.remove('bg-gray-400', 'opacity-50', 'cursor-not-allowed'); loginBtn.classList.add('primary-bg', 'hover:opacity-90');
     }
     if(currentRole) window.refreshActiveSection();
 });
@@ -143,11 +128,25 @@ window.handleLogin = function() {
   if(!emailEl || !passEl) return;
   const email = emailEl.value.trim().toLowerCase(); const pass = passEl.value.trim();
   if(!email || !pass) return;
-  if(email === 'admin@school.com' && pass === '123') { currentRole = 'admin'; document.body.classList.remove('role-teacher'); document.getElementById('roleDisplay').innerHTML = '<i class="fa-solid fa-user-shield"></i> آدمن (رئيسي)'; window.startApp(); return; } 
-  const user = Object.values(teachersData).find(t => t.email === email && t.password === pass);
-  if(user) {
-    if(user.role === 'admin') { currentRole = 'admin'; currentUser = user; document.body.classList.remove('role-teacher'); document.getElementById('roleDisplay').innerHTML = `<i class="fa-solid fa-user-shield"></i> إداري: ${user.name}`; window.startApp(); } 
-    else { currentRole = 'teacher'; currentUser = user; document.body.classList.add('role-teacher'); document.getElementById('roleDisplay').innerHTML = `<i class="fa-solid fa-chalkboard-user"></i> أ. ${user.name}`; window.startApp(); }
+  
+  if(email === 'admin@school.com' && pass === '123') { 
+      currentRole = 'admin'; currentUser = { id: 'admin_sys', name: 'المدير' };
+      document.body.classList.remove('role-teacher'); document.getElementById('roleDisplay').innerHTML = '<i class="fa-solid fa-user-shield"></i> آدمن (رئيسي)'; 
+      window.startApp(); return; 
+  } 
+  
+  const userEntry = Object.entries(teachersData).find(([k, t]) => t.email === email && t.password === pass);
+  if(userEntry) {
+    const userId = userEntry[0]; const userData = userEntry[1];
+    if(userData.role === 'admin') { 
+        currentRole = 'admin'; currentUser = { id: userId, ...userData }; 
+        document.body.classList.remove('role-teacher'); document.getElementById('roleDisplay').innerHTML = `<i class="fa-solid fa-user-shield"></i> إداري: ${currentUser.name}`; 
+        window.startApp(); 
+    } else { 
+        currentRole = 'teacher'; currentUser = { id: userId, ...userData }; 
+        document.body.classList.add('role-teacher'); document.getElementById('roleDisplay').innerHTML = `<i class="fa-solid fa-chalkboard-user"></i> أ. ${currentUser.name}`; 
+        window.startApp(); 
+    }
   } else { alert("بيانات الدخول غير صحيحة!"); }
 };
 
@@ -256,7 +255,7 @@ window.saveStudent = async function(e) {
   const newGrade = document.getElementById("studentGrade").value; const newClass = document.getElementById("studentClass").value;
   let gNum = old.groupNum; let sNum = old.seatNum;
   if(old.grade && (old.grade !== newGrade || String(old.class) !== String(newClass))) { gNum = null; sNum = null; }
-  const payload = { name: document.getElementById("studentName").value, grade: newGrade, class: newClass, levels: old.levels || {"رياضيات":3,"علوم":3,"لغتي":3,"إنجليزي":3}, stars: old.stars || 0, health: document.getElementById("studentHealth").value, studentId: document.getElementById("studentId").value, guardianId: document.getElementById("guardianId").value, dadPhone: document.getElementById("dadPhone").value, momPhone: document.getElementById("momPhone").value, groupNum: gNum, seatNum: sNum, planType: old.planType||"none" }; 
+  const payload = { name: document.getElementById("studentName").value, grade: newGrade, class: newClass, levels: old.levels || {"رياضيات":3,"علوم":3,"لغتي":3,"إنجليزي":3}, stars: old.stars || 0, health: document.getElementById("studentHealth").value || "", studentId: document.getElementById("studentId").value || "", guardianId: document.getElementById("guardianId").value || "", dadPhone: document.getElementById("dadPhone").value || "", momPhone: document.getElementById("momPhone").value || "", groupNum: gNum === undefined ? null : gNum, seatNum: sNum === undefined ? null : sNum, planType: old.planType||"none" }; 
   await database.ref(`students/${k}`).set(payload); window.closeModal("studentModal"); 
 };
 
@@ -278,14 +277,14 @@ window.saveLevels = async function(e) {
 window.filterBehaviorStudents = function() { 
   const g = document.getElementById("behaviorGradeFilter").value; const c = document.getElementById("behaviorClassFilter").value; const sel = document.getElementById("behaviorStudent"); sel.innerHTML = ""; 
   const arr = Object.entries(studentsData).filter(x => (!g || x[1].grade===g) && (!c || String(x[1].class)===String(c))).sort(window.sortArabicAlphabetically);
-  arr.forEach(x => { sel.innerHTML += `<option value="${x[0]}">${x[1].name}</option>`; }); 
+  arr.forEach(x => { sel.innerHTML += `<option value="${x[0]}">${window.escapeHtml(x[1].name)}</option>`; }); 
 };
 window.openAddBehaviorModal = function() { window.filterBehaviorStudents(); window.openModal("addBehaviorModal"); };
 
 window.saveBehavior = async function(e) { 
   e.preventDefault(); 
   const k = document.getElementById("behaviorStudent").value; const id = window.generateId("beh");
-  const payload = { studentKey: k, degree: document.getElementById("behaviorDegree").value, description: document.getElementById("behaviorDesc").value, action: document.getElementById("behaviorAction").value, date: document.getElementById("behaviorDate").value }; 
+  const payload = { studentKey: k, degree: document.getElementById("behaviorDegree").value, description: document.getElementById("behaviorDesc").value, action: document.getElementById("behaviorAction").value || "لا يوجد", date: document.getElementById("behaviorDate").value }; 
   await database.ref(`behavior/${id}`).set(payload); window.closeModal("addBehaviorModal"); 
 };
 
@@ -293,13 +292,13 @@ window.openBehaviorRecord = function(k) { const stBehs = Object.values(behaviorD
 
 window.openAddRewardModal = function(k) { 
   document.getElementById("rewardStudentKey").value = k; document.getElementById("rewardStudentNameDisplay").textContent = studentsData[k].name; 
-  if (currentRole === 'teacher') { const subjSelect = document.getElementById("rewardSubject"); if(subjSelect) subjSelect.value = currentUser.subject; }
+  if (currentRole === 'teacher') { const subjSelect = document.getElementById("rewardSubject"); if(subjSelect) subjSelect.value = currentUser.subject || "عام"; }
   window.openModal("addRewardModal"); 
 };
 
 window.saveReward = async function(e) { 
   e.preventDefault(); const k = document.getElementById("rewardStudentKey").value; const id = window.generateId("rew"); const currentStars = studentsData[k].stars || 0;
-  const updates = {}; updates[`rewards/${id}`] = { studentKey: k, subject: document.getElementById("rewardSubject").value, reason: document.getElementById("rewardReason").value, date: selectedDailyDate }; updates[`students/${k}/stars`] = currentStars + 1;
+  const updates = {}; updates[`rewards/${id}`] = { studentKey: k, subject: document.getElementById("rewardSubject").value || "عام", reason: document.getElementById("rewardReason").value, date: selectedDailyDate }; updates[`students/${k}/stars`] = currentStars + 1;
   await database.ref('/').update(updates); window.closeModal("addRewardModal"); 
 };
 
@@ -386,13 +385,13 @@ window.filterAssessmentStudents = function() {
 window.openAssessmentModal = function() { 
   const sel = document.getElementById("assessmentStudent"); sel.innerHTML = ""; const subjSel = document.getElementById("assessmentSubject");
   if (currentRole === 'teacher') {
-      const activeCls = currentUser.classes[document.getElementById('teacherClassSelect').value]; const arr = Object.entries(studentsData).filter(x => x[1].grade === activeCls.grade && String(x[1].class) === String(activeCls.class)).sort(window.sortArabicAlphabetically); arr.forEach(x => { sel.innerHTML += `<option value="${x[0]}">${window.escapeHtml(x[1].name)}</option>`; }); subjSel.value = currentUser.subject; subjSel.disabled = true; document.getElementById("assessmentGradeFilter").style.display = 'none'; document.getElementById("assessmentClassFilter").style.display = 'none';
+      const activeCls = currentUser.classes[document.getElementById('teacherClassSelect').value]; const arr = Object.entries(studentsData).filter(x => x[1].grade === activeCls.grade && String(x[1].class) === String(activeCls.class)).sort(window.sortArabicAlphabetically); arr.forEach(x => { sel.innerHTML += `<option value="${x[0]}">${window.escapeHtml(x[1].name)}</option>`; }); subjSel.value = currentUser.subject || "عام"; subjSel.disabled = true; document.getElementById("assessmentGradeFilter").style.display = 'none'; document.getElementById("assessmentClassFilter").style.display = 'none';
   } else { window.filterAssessmentStudents(); subjSel.disabled = false; document.getElementById("assessmentGradeFilter").style.display = 'block'; document.getElementById("assessmentClassFilter").style.display = 'block'; }
   window.openModal("assessmentModal"); 
 };
 
 window.saveAssessment = async function(e) { 
-  e.preventDefault(); const k = document.getElementById("assessmentStudent").value; const sc = Number(document.getElementById("assessmentScore").value); const lvl = sc<50?1:sc<65?2:sc<80?3:sc<90?4:5; const subj = currentRole === 'teacher' ? currentUser.subject : document.getElementById("assessmentSubject").value; const id = window.generateId("ass");
+  e.preventDefault(); const k = document.getElementById("assessmentStudent").value; const sc = Number(document.getElementById("assessmentScore").value); const lvl = sc<50?1:sc<65?2:sc<80?3:sc<90?4:5; const subj = currentRole === 'teacher' ? (currentUser.subject || "عام") : document.getElementById("assessmentSubject").value; const id = window.generateId("ass");
   const updates = {}; updates[`assessments/${id}`] = { studentKey: k, subject: subj, skill: document.getElementById("assessmentSkill").value, score: sc, level: lvl }; updates[`students/${k}/levels/${subj}`] = lvl; await database.ref('/').update(updates); window.closeModal("assessmentModal"); 
 };
 
@@ -412,7 +411,7 @@ window.renderAcademicDashboard = function() {
 };
 
 window.renderTeacherAcademicDashboard = function() {
-    const sel = document.getElementById('teacherClassSelect'); if(!sel || sel.options.length === 0) return; const activeCls = currentUser.classes[sel.value]; const subj = currentUser.subject;
+    const sel = document.getElementById('teacherClassSelect'); if(!sel || sel.options.length === 0) return; const activeCls = currentUser.classes[sel.value]; const subj = currentUser.subject || "عام";
     const arr = Object.values(studentsData).filter(x => x.grade === activeCls.grade && String(x.class) === String(activeCls.class)); const tot = arr.length || 1; const cols = {1:"bg-red-500", 2:"bg-orange-400", 3:"bg-yellow-400", 4:"bg-green-400", 5:"bg-blue-400"};
     document.getElementById("tchAcademicLevelsChart").innerHTML = [5,4,3,2,1].map(l => { const count = arr.filter(s => (s.levels[subj]||3) == l).length; return `<div class="flex items-center gap-3"><span class="w-12 text-sm font-bold">مستوى ${l}</span><div class="flex-1 bg-gray-100 h-3 rounded-full overflow-hidden"><div class="${cols[l]} h-full" style="width:${Math.round((count/tot)*100)}%"></div></div><span class="w-8 font-black">${count}</span></div>`; }).join("");
     const stKeys = new Set(Object.entries(studentsData).filter(x=>x[1].grade === activeCls.grade && String(x[1].class) === String(activeCls.class)).map(x=>x[0]));
@@ -425,7 +424,7 @@ window.renderTeacherAcademicDashboard = function() {
 };
 
 window.generateTeacherHonorRoll = function() {
-    const sel = document.getElementById('teacherClassSelect'); if(!sel || sel.options.length === 0) return; const activeCls = currentUser.classes[sel.value]; const subj = currentUser.subject;
+    const sel = document.getElementById('teacherClassSelect'); if(!sel || sel.options.length === 0) return; const activeCls = currentUser.classes[sel.value]; const subj = currentUser.subject || "عام";
     const clsStudents = Object.entries(studentsData).filter(x => x[1].grade === activeCls.grade && String(x[1].class) === String(activeCls.class));
     const subjStars = {}; Object.values(rewardsData).forEach(r => { if (r.subject === subj) { subjStars[r.studentKey] = (subjStars[r.studentKey] || 0) + 1; } });
     const arr = clsStudents.map(([k, s]) => { return { name: s.name, grade: s.grade, class: s.class, stars: subjStars[k] || 0 }; }).filter(s => s.stars > 0).sort((a,b) => { if(b.stars !== a.stars) return b.stars - a.stars; return window.sortArabicAlphabetically(a, b); });
@@ -503,62 +502,74 @@ window.getUpdatedLevel = function(stdKey, subj, updatesObj) {
 };
 
 window.recordDailyXP = async function(stdKey, type, points, note) {
-  const isAbsent = dailyRecords.some(r => r.stdKey === stdKey && r.date === selectedDailyDate && r.type === 'attendance' && r.subject === currentUser.subject);
+  const subj = currentUser.subject || "عام";
+  const tId = currentUser.id || "unknown";
+  const isAbsent = dailyRecords.some(r => r.stdKey === stdKey && r.date === selectedDailyDate && r.type === 'attendance' && r.subject === subj);
   if(isAbsent) return alert("لا يمكن الرصد لطالب غائب!");
   const updates = {}; const newId = window.generateId("rec");
+  
   if (type === 'participation') {
-      const beh = dailyRecords.find(r => r.stdKey === stdKey && r.date === selectedDailyDate && r.type === 'behavior' && r.subject === currentUser.subject);
-      if (beh) updates[`daily/${beh.id}`] = null; else updates[`daily/${newId}`] = { id: newId, stdKey, teacherId: currentUser.id, subject: currentUser.subject, date: selectedDailyDate, type, points, note };
+      const beh = dailyRecords.find(r => r.stdKey === stdKey && r.date === selectedDailyDate && r.type === 'behavior' && r.subject === subj);
+      if (beh) updates[`daily/${beh.id}`] = null; else updates[`daily/${newId}`] = { id: newId, stdKey, teacherId: tId, subject: subj, date: selectedDailyDate, type, points, note };
   } else if (type === 'behavior') {
-      const part = dailyRecords.find(r => r.stdKey === stdKey && r.date === selectedDailyDate && r.type === 'participation' && r.subject === currentUser.subject);
-      if (part) updates[`daily/${part.id}`] = null; else updates[`daily/${newId}`] = { id: newId, stdKey, teacherId: currentUser.id, subject: currentUser.subject, date: selectedDailyDate, type, points, note };
-  } else { updates[`daily/${newId}`] = { id: newId, stdKey, teacherId: currentUser.id, subject: currentUser.subject, date: selectedDailyDate, type, points, note }; }
-  updates[`students/${stdKey}/levels/${currentUser.subject}`] = window.getUpdatedLevel(stdKey, currentUser.subject, updates);
+      const part = dailyRecords.find(r => r.stdKey === stdKey && r.date === selectedDailyDate && r.type === 'participation' && r.subject === subj);
+      if (part) updates[`daily/${part.id}`] = null; else updates[`daily/${newId}`] = { id: newId, stdKey, teacherId: tId, subject: subj, date: selectedDailyDate, type, points, note };
+  } else { updates[`daily/${newId}`] = { id: newId, stdKey, teacherId: tId, subject: subj, date: selectedDailyDate, type, points, note }; }
+  
+  updates[`students/${stdKey}/levels/${subj}`] = window.getUpdatedLevel(stdKey, subj, updates);
   await database.ref('/').update(updates); 
 };
 
 window.toggleHomework = async function(stdKey) {
-  const isAbsent = dailyRecords.some(r => r.stdKey === stdKey && r.date === selectedDailyDate && r.type === 'attendance' && r.subject === currentUser.subject);
+  const subj = currentUser.subject || "عام";
+  const tId = currentUser.id || "unknown";
+  const isAbsent = dailyRecords.some(r => r.stdKey === stdKey && r.date === selectedDailyDate && r.type === 'attendance' && r.subject === subj);
   if(isAbsent) return;
-  const rec = dailyRecords.find(r => r.stdKey === stdKey && r.date === selectedDailyDate && r.type === 'homework' && r.subject === currentUser.subject);
+  const rec = dailyRecords.find(r => r.stdKey === stdKey && r.date === selectedDailyDate && r.type === 'homework' && r.subject === subj);
   const updates = {};
   if (!rec) {
-    const newId = window.generateId("rec"); updates[`daily/${newId}`] = { id: newId, stdKey, teacherId: currentUser.id, subject: currentUser.subject, date: selectedDailyDate, type: 'homework', points: 1, note: 'تم حل الواجب' };
+    const newId = window.generateId("rec"); updates[`daily/${newId}`] = { id: newId, stdKey, teacherId: tId, subject: subj, date: selectedDailyDate, type: 'homework', points: 1, note: 'تم حل الواجب' };
   } else {
     if (rec.points > 0) { updates[`daily/${rec.id}/points`] = -1; updates[`daily/${rec.id}/note`] = 'لم يحل الواجب'; } else { updates[`daily/${rec.id}`] = null; }
   }
-  updates[`students/${stdKey}/levels/${currentUser.subject}`] = window.getUpdatedLevel(stdKey, currentUser.subject, updates);
+  updates[`students/${stdKey}/levels/${subj}`] = window.getUpdatedLevel(stdKey, subj, updates);
   await database.ref('/').update(updates);
 };
 
 window.toggleAttendance = async function(stdKey) {
-  const tardyRec = dailyRecords.find(r => r.stdKey === stdKey && r.date === selectedDailyDate && r.type === 'tardy' && r.subject === currentUser.subject);
-  const absRec = dailyRecords.find(r => r.stdKey === stdKey && r.date === selectedDailyDate && r.type === 'attendance' && r.subject === currentUser.subject);
+  const subj = currentUser.subject || "عام";
+  const tId = currentUser.id || "unknown";
+  const tardyRec = dailyRecords.find(r => r.stdKey === stdKey && r.date === selectedDailyDate && r.type === 'tardy' && r.subject === subj);
+  const absRec = dailyRecords.find(r => r.stdKey === stdKey && r.date === selectedDailyDate && r.type === 'attendance' && r.subject === subj);
   const updates = {}; const newId = window.generateId("rec");
-  if (!tardyRec && !absRec) { updates[`daily/${newId}`] = { id: newId, stdKey, teacherId: currentUser.id, subject: currentUser.subject, date: selectedDailyDate, type: 'tardy', points: -1, note: 'تأخر' }; } 
+  if (!tardyRec && !absRec) { updates[`daily/${newId}`] = { id: newId, stdKey, teacherId: tId, subject: subj, date: selectedDailyDate, type: 'tardy', points: -1, note: 'تأخر' }; } 
   else if (tardyRec) {
       updates[`daily/${tardyRec.id}`] = null;
-      dailyRecords.forEach(r => { if(r.stdKey === stdKey && r.date === selectedDailyDate && r.subject === currentUser.subject && r.type !== 'attendance') updates[`daily/${r.id}`] = null; });
-      updates[`daily/${newId}`] = { id: newId, stdKey, teacherId: currentUser.id, subject: currentUser.subject, date: selectedDailyDate, type: 'attendance', points: -1, note: 'غياب' };
+      dailyRecords.forEach(r => { if(r.stdKey === stdKey && r.date === selectedDailyDate && r.subject === subj && r.type !== 'attendance') updates[`daily/${r.id}`] = null; });
+      updates[`daily/${newId}`] = { id: newId, stdKey, teacherId: tId, subject: subj, date: selectedDailyDate, type: 'attendance', points: -1, note: 'غياب' };
   } else if (absRec) { updates[`daily/${absRec.id}`] = null; }
-  updates[`students/${stdKey}/levels/${currentUser.subject}`] = window.getUpdatedLevel(stdKey, currentUser.subject, updates);
+  updates[`students/${stdKey}/levels/${subj}`] = window.getUpdatedLevel(stdKey, subj, updates);
   await database.ref('/').update(updates);
 };
 
-window.openTeacherLevelModal = function(stdKey) { document.getElementById("tchLvlStdKey").value = stdKey; const currentLvl = studentsData[stdKey].levels[currentUser.subject] || 3; document.getElementById("tchLvlSelect").value = currentLvl; window.openModal("teacherLevelModal"); };
+window.openTeacherLevelModal = function(stdKey) { 
+  const subj = currentUser.subject || "عام";
+  document.getElementById("tchLvlStdKey").value = stdKey; const currentLvl = studentsData[stdKey].levels[subj] || 3; document.getElementById("tchLvlSelect").value = currentLvl; window.openModal("teacherLevelModal"); 
+};
 
 window.saveTeacherLevel = async function(e) {
-  e.preventDefault(); const stdKey = document.getElementById("tchLvlStdKey").value; const newLvl = parseInt(document.getElementById("tchLvlSelect").value);
-  if(studentsData[stdKey]) { await database.ref(`students/${stdKey}/levels/${currentUser.subject}`).set(newLvl); window.closeModal("teacherLevelModal"); }
+  e.preventDefault(); const subj = currentUser.subject || "عام"; const stdKey = document.getElementById("tchLvlStdKey").value; const newLvl = parseInt(document.getElementById("tchLvlSelect").value);
+  if(studentsData[stdKey]) { await database.ref(`students/${stdKey}/levels/${subj}`).set(newLvl); window.closeModal("teacherLevelModal"); }
 };
 
 window.renderTeacherViews = function() {
   const sel = document.getElementById('teacherClassSelect'); if(!sel || sel.options.length === 0) return; const activeCls = currentUser.classes[sel.value];
+  const subj = currentUser.subject || "عام";
   const clsStudents = Object.entries(studentsData).filter(x => x[1].grade === activeCls.grade && String(x[1].class) === String(activeCls.class)).sort(window.sortArabicAlphabetically);
   const tbody = document.getElementById("teacherDailyTable");
   if(tbody) {
     tbody.innerHTML = clsStudents.map(x => {
-      const k = x[0]; const s = x[1]; const stdRecords = dailyRecords.filter(r => r.stdKey === k && r.subject === currentUser.subject); const currentLevel = s.levels[currentUser.subject] || 3;
+      const k = x[0]; const s = x[1]; const stdRecords = dailyRecords.filter(r => r.stdKey === k && r.subject === subj); const currentLevel = s.levels[subj] || 3;
       const attToday = stdRecords.find(r => r.date === selectedDailyDate && r.type === 'attendance'); const tardyToday = stdRecords.find(r => r.date === selectedDailyDate && r.type === 'tardy'); const hwToday = stdRecords.find(r => r.date === selectedDailyDate && r.type === 'homework');
       let partCount = 0; let behCount = 0; stdRecords.forEach(r => { if(r.date === selectedDailyDate) { if(r.type === 'participation') partCount++; if(r.type === 'behavior') behCount++; } });
       const partBadge = partCount > 0 ? `<span class="badge-counter badge-green left-[-6px] top-[-6px]">${partCount}</span>` : ''; const behBadge = behCount > 0 ? `<span class="badge-counter badge-red left-[-6px] top-[-6px]">${behCount}</span>` : '';
@@ -580,7 +591,7 @@ window.renderTeacherViews = function() {
         const std = gStudents.find(x => x[1].seatNum === seat); 
         let h = `<button type="button" class="seat-pill seat-empty no-print" onclick="window.openAssignModalTeacher(${i},${seat})" title="إضافة طالب في هذا المقعد"><i class="fa-solid fa-plus text-gray-300"></i></button>`;
         if(std) { 
-          const stdRecords = dailyRecords.filter(r => r.stdKey === std[0] && r.subject === currentUser.subject); let xp = 0; stdRecords.forEach(r => xp += r.points); const currentLevel = std[1].levels[currentUser.subject] || 3;
+          const stdRecords = dailyRecords.filter(r => r.stdKey === std[0] && r.subject === subj); let xp = 0; stdRecords.forEach(r => xp += r.points); const currentLevel = std[1].levels[subj] || 3;
           let partCount = 0; stdRecords.forEach(r => { if(r.date === selectedDailyDate && r.type === 'participation') partCount++; }); const mapPartBadge = partCount > 0 ? `<span class="badge-counter badge-green no-print" style="top:-8px; left:-8px;">${partCount}</span>` : '';
           const attToday = stdRecords.find(r => r.date === selectedDailyDate && r.type === 'attendance'); const isAbsentClass = attToday ? 'opacity-40 grayscale' : 'hover:bg-yellow-50';
           const nameParts = std[1].name.trim().split(" "); const firstName = nameParts[0]; const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : ''; const lineThrough = attToday ? 'line-through text-gray-400' : '';
@@ -596,15 +607,17 @@ window.renderTeacherViews = function() {
 
 window.rewardGroupXP = function(groupNum) {
   const sel = document.getElementById('teacherClassSelect'); const activeCls = currentUser.classes[sel.value];
+  const subj = currentUser.subject || "عام";
   const gStudents = Object.entries(studentsData).filter(x => x[1].grade === activeCls.grade && String(x[1].class) === String(activeCls.class) && x[1].groupNum === groupNum);
   if(gStudents.length === 0) return alert("لا يوجد طلاب هنا");
-  gStudents.forEach(x => { const isAbsent = dailyRecords.some(r => r.stdKey === x[0] && r.date === selectedDailyDate && r.type === 'attendance' && r.subject === currentUser.subject); if(!isAbsent) window.recordDailyXP(x[0], 'participation', 1, 'عمل جماعي مميز'); });
+  gStudents.forEach(x => { const isAbsent = dailyRecords.some(r => r.stdKey === x[0] && r.date === selectedDailyDate && r.type === 'attendance' && r.subject === subj); if(!isAbsent) window.recordDailyXP(x[0], 'participation', 1, 'عمل جماعي مميز'); });
 };
 
 window.smartDistributeStudentsTeacher = async function() { 
   const sel = document.getElementById('teacherClassSelect'); const activeCls = currentUser.classes[sel.value];
+  const subj = currentUser.subject || "عام";
   const arr = Object.entries(studentsData).filter(x => x[1].grade === activeCls.grade && String(x[1].class) === String(activeCls.class));
-  if(!arr.length) return; arr.sort((a,b) => (a[1].levels[currentUser.subject]||3) - (b[1].levels[currentUser.subject]||3)); 
+  if(!arr.length) return; arr.sort((a,b) => (a[1].levels[subj]||3) - (b[1].levels[subj]||3)); 
   let gIdx=1, dir=1; const groups={1:[],2:[],3:[],4:[],5:[]}; 
   arr.forEach(x => { groups[gIdx].push(x[0]); gIdx += dir; if(gIdx > 5){ gIdx=5; dir=-1; gIdx+=dir; } else if(gIdx < 1){ gIdx=1; dir=1; gIdx+=dir; } }); 
   const updates = {}; Object.entries(groups).forEach(([gn,keys]) => { keys.forEach((k,i) => { updates[`students/${k}/groupNum`] = Number(gn); updates[`students/${k}/seatNum`] = i+1; }); }); 
@@ -633,13 +646,14 @@ window.openSwapModalTeacher = function(k, event) {
 
 window.generateTeacherFullReport = function(isUpdate = false) {
   const sel = document.getElementById('teacherClassSelect'); if(!sel || sel.options.length === 0) return; const activeCls = currentUser.classes[sel.value];
+  const subj = currentUser.subject || "عام";
   const clsStudents = Object.entries(studentsData).filter(x => x[1].grade === activeCls.grade && String(x[1].class) === String(activeCls.class)).sort(window.sortArabicAlphabetically);
   let dateFrom = ""; let dateTo = ""; if(isUpdate) { dateFrom = document.getElementById("tchRepFrom")?.value || ""; dateTo = document.getElementById("tchRepTo")?.value || ""; }
   let html = `<div class="flex flex-wrap gap-3 mb-4 bg-purple-50 p-3 rounded-xl border border-purple-100 no-print"><div class="flex-1 min-w-[150px]"><label class="text-xs font-bold text-gray-500 mb-1 block">من تاريخ:</label><input type="date" id="tchRepFrom" value="${dateFrom}" onchange="window.generateTeacherFullReport(true)" class="w-full border p-2 rounded outline-none font-bold text-sm"></div><div class="flex-1 min-w-[150px]"><label class="text-xs font-bold text-gray-500 mb-1 block">إلى تاريخ:</label><input type="date" id="tchRepTo" value="${dateTo}" onchange="window.generateTeacherFullReport(true)" class="w-full border p-2 rounded outline-none font-bold text-sm"></div></div>`;
   html += `<table class="w-full text-sm text-center border-collapse"><thead class="bg-gray-100 font-bold border-b-2"><tr><th class="p-3 border">اسم الطالب</th><th class="p-3 border text-green-700">المشاركات (+1)</th><th class="p-3 border text-blue-700">واجبات محلولة</th><th class="p-3 border text-orange-600">واجبات مفقودة</th><th class="p-3 border text-red-700">غياب (-1)</th><th class="p-3 border text-yellow-600">تأخر (-1)</th><th class="p-3 border text-red-900">مخالفات (-1)</th><th class="p-3 border">الصافي (XP)</th></tr></thead><tbody>`;
   let hasData = false;
   clsStudents.forEach(([k, s]) => {
-    const stdRecords = dailyRecords.filter(r => { if(r.stdKey !== k || r.subject !== currentUser.subject) return false; if(dateFrom && r.date < dateFrom) return false; if(dateTo && r.date > dateTo) return false; return true; });
+    const stdRecords = dailyRecords.filter(r => { if(r.stdKey !== k || r.subject !== subj) return false; if(dateFrom && r.date < dateFrom) return false; if(dateTo && r.date > dateTo) return false; return true; });
     if(!isUpdate || stdRecords.length > 0) { 
        hasData = true; let xp = 0; stdRecords.forEach(r => xp += r.points); const parts = stdRecords.filter(r => r.type === 'participation').length; const hwDone = stdRecords.filter(r => r.type === 'homework' && r.points > 0).length; const hwMissed = stdRecords.filter(r => r.type === 'homework' && r.points < 0).length; const abs = stdRecords.filter(r => r.type === 'attendance').length; const tardies = stdRecords.filter(r => r.type === 'tardy').length; const behs = stdRecords.filter(r => r.type === 'behavior').length;
        html += `<tr class="border-b hover:bg-gray-50"><td class="p-3 border font-bold text-right">${window.escapeHtml(s.name)}</td><td class="p-3 border font-black">${parts}</td><td class="p-3 border font-black">${hwDone}</td><td class="p-3 border font-black">${hwMissed}</td><td class="p-3 border font-black text-red-500">${abs}</td><td class="p-3 border font-black text-yellow-600">${tardies}</td><td class="p-3 border font-black text-red-800">${behs}</td><td class="p-3 border font-black" dir="ltr">${xp}</td></tr>`;
@@ -649,8 +663,9 @@ window.generateTeacherFullReport = function(isUpdate = false) {
 };
 
 window.openStudentTracker = function(stdKey) {
-  const s = studentsData[stdKey]; if(!s) return; const stdRecords = dailyRecords.filter(r => r.stdKey === stdKey && r.subject === currentUser.subject); let xp = 0; stdRecords.forEach(r => xp += r.points);
-  document.getElementById("trackerStudentName").textContent = s.name; document.getElementById("trackXP").textContent = xp; document.getElementById("trackLevel").textContent = s.levels[currentUser.subject] || 3; document.getElementById("trackAbs").textContent = stdRecords.filter(r => r.type === 'attendance').length; document.getElementById("trackTardy").textContent = stdRecords.filter(r => r.type === 'tardy').length; document.getElementById("trackMissedHW").textContent = stdRecords.filter(r => r.type === 'homework' && r.points < 0).length;
+  const subj = currentUser.subject || "عام";
+  const s = studentsData[stdKey]; if(!s) return; const stdRecords = dailyRecords.filter(r => r.stdKey === stdKey && r.subject === subj); let xp = 0; stdRecords.forEach(r => xp += r.points);
+  document.getElementById("trackerStudentName").textContent = s.name; document.getElementById("trackXP").textContent = xp; document.getElementById("trackLevel").textContent = s.levels[subj] || 3; document.getElementById("trackAbs").textContent = stdRecords.filter(r => r.type === 'attendance').length; document.getElementById("trackTardy").textContent = stdRecords.filter(r => r.type === 'tardy').length; document.getElementById("trackMissedHW").textContent = stdRecords.filter(r => r.type === 'homework' && r.points < 0).length;
   const hist = document.getElementById("trackerHistory");
   if(stdRecords.length === 0) { hist.innerHTML = `<p class="text-sm font-bold text-gray-400">لا يوجد سجلات</p>`; } else { hist.innerHTML = stdRecords.sort((a,b)=> new Date(b.date)-new Date(a.date)).map(r => { const color = r.points > 0 ? "text-green-600 bg-green-50" : "text-red-600 bg-red-50"; return `<div class="flex justify-between p-3 rounded-lg border border-gray-100 ${color}"><span class="font-bold text-sm">${window.escapeHtml(r.note)}</span><span class="font-black" dir="ltr">${r.points > 0 ? '+':''}${r.points}</span></div>`; }).join(""); }
   window.openModal("modalTracker");
