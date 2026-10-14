@@ -1,5 +1,5 @@
 /* =========================================
-   SCRIPT.JS - النسخة المحدثة (إضافة زر الفصول للجوال)
+   SCRIPT.JS - النسخة الاحترافية (إصلاح التقارير وتصغير الخريطة)
    ========================================= */
 
 const firebaseConfig = {
@@ -22,6 +22,35 @@ let teachersData = {}; let dailyRecords = [];
 let isDataLoaded = false;
 let selectedDailyDate = new Date().toISOString().split("T")[0];
 let currentRole = null; let currentUser = null; 
+
+// ==========================================
+// 🔐 نظام الجلسات الذكي
+// ==========================================
+const SESSION_DURATION = 8 * 60 * 60 * 1000; 
+
+window.checkSession = function() {
+    const savedSession = localStorage.getItem('school_session');
+    if(savedSession) {
+        const sessionData = JSON.parse(savedSession);
+        const now = Date.now();
+        if(now - sessionData.timestamp < SESSION_DURATION) {
+            currentRole = sessionData.role;
+            currentUser = sessionData.user;
+            if(currentRole === 'admin') {
+                document.body.classList.remove('role-teacher'); 
+                document.getElementById('roleDisplay').innerHTML = `<i class="fa-solid fa-user-shield"></i> إداري: ${currentUser.name}`;
+            } else {
+                document.body.classList.add('role-teacher'); 
+                document.getElementById('roleDisplay').innerHTML = `<i class="fa-solid fa-chalkboard-user"></i> أ. ${currentUser.name}`;
+            }
+            window.startApp(true);
+            return true;
+        } else {
+            localStorage.removeItem('school_session');
+        }
+    }
+    return false;
+};
 
 window.sortArabicAlphabetically = function(a, b) {
     const nameA = a.name ? a.name.trim() : (a[1] && a[1].name ? a[1].name.trim() : "");
@@ -69,6 +98,7 @@ database.ref('/').on('value', (snapshot) => {
     if(loginBtn && loginBtn.disabled) {
         loginBtn.textContent = "دخول للمنصة"; loginBtn.disabled = false;
         loginBtn.classList.remove('bg-gray-400', 'opacity-50', 'cursor-not-allowed'); loginBtn.classList.add('primary-bg', 'hover:opacity-90');
+        window.checkSession();
     }
     if(currentRole) window.refreshActiveSection();
 });
@@ -111,14 +141,9 @@ window.toggleSidebar = function() {
     else { sidebar.classList.add('open'); overlay.classList.add('show'); }
 };
 
-// --- دالة جديدة لتبديل الفصول من الجوال ---
 window.syncMobileClassSelect = function(val) {
     const deskSel = document.getElementById('teacherClassSelect');
-    if(deskSel) {
-        deskSel.value = val;
-        window.refreshActiveSection();
-        window.toggleSidebar(); // إغلاق القائمة الجانبية لتجربة مستخدم أفضل
-    }
+    if(deskSel) { deskSel.value = val; window.refreshActiveSection(); window.toggleSidebar(); }
 };
 
 window.populateSidebarMenu = function() {
@@ -128,24 +153,12 @@ window.populateSidebarMenu = function() {
         menuContent.innerHTML = `<a href="#" onclick="window.showSection('dashboard'); window.toggleSidebar();" class="sidebar-link active"><i class="fa-solid fa-chart-line ml-2 w-5"></i> الإدارة</a><a href="#" onclick="window.showSection('teachersAdmin'); window.toggleSidebar();" class="sidebar-link"><i class="fa-solid fa-users-gear ml-2 w-5"></i> المستخدمين</a><a href="#" onclick="window.showSection('seating'); window.toggleSidebar();" class="sidebar-link"><i class="fa-solid fa-chair ml-2 w-5"></i> الفصول</a><a href="#" onclick="window.showSection('academic'); window.toggleSidebar();" class="sidebar-link"><i class="fa-solid fa-chart-pie ml-2 w-5"></i> تقارير التقييم</a><a href="#" onclick="window.showSection('reports'); window.toggleSidebar();" class="sidebar-link"><i class="fa-solid fa-file-lines ml-2 w-5"></i> التقارير</a>`;
     } else if (currentRole === 'teacher') {
         roleDisplay.innerHTML = `<i class="fa-solid fa-chalkboard-user"></i> أستاذ/ة ${currentUser.name}`;
-        
-        // --- بناء زر اختيار الفصل المخصص للجوال ---
         let mobileClassSelect = '';
         if (currentUser.classes && currentUser.classes.length > 0) {
-            const deskSel = document.getElementById('teacherClassSelect');
-            const currentVal = deskSel ? deskSel.value : '0';
+            const deskSel = document.getElementById('teacherClassSelect'); const currentVal = deskSel ? deskSel.value : '0';
             const options = currentUser.classes.map((c, i) => `<option value="${i}" ${String(i)===String(currentVal)?'selected':''}>${c.grade} - ف${c.class}</option>`).join('');
-            
-            mobileClassSelect = `
-            <div class="mx-4 my-4 p-3 bg-purple-50 rounded-xl border border-purple-100">
-                <label class="text-xs font-black text-purple-800 mb-2 block"><i class="fa-solid fa-users-viewfinder"></i> تبديل الفصل الحالي:</label>
-                <select id="mobileTeacherClassSelect" onchange="window.syncMobileClassSelect(this.value)" class="w-full border-0 p-2 rounded-lg font-bold text-sm bg-white text-purple-900 outline-none shadow-sm cursor-pointer">
-                    ${options}
-                </select>
-            </div>
-            <hr class="border-gray-100 mb-2">`;
+            mobileClassSelect = `<div class="mx-4 my-4 p-3 bg-purple-50 rounded-xl border border-purple-100"><label class="text-xs font-black text-purple-800 mb-2 block"><i class="fa-solid fa-users-viewfinder"></i> تبديل الفصل الحالي:</label><select id="mobileTeacherClassSelect" onchange="window.syncMobileClassSelect(this.value)" class="w-full border-0 p-2 rounded-lg font-bold text-sm bg-white text-purple-900 outline-none shadow-sm cursor-pointer">${options}</select></div><hr class="border-gray-100 mb-2">`;
         }
-
         menuContent.innerHTML = mobileClassSelect + `<a href="#" onclick="window.showSection('teacherDaily'); window.toggleSidebar();" class="sidebar-link active"><i class="fa-solid fa-list-check ml-2 w-5"></i> الكشف اليومي</a><a href="#" onclick="window.showSection('teacherMap'); window.toggleSidebar();" class="sidebar-link"><i class="fa-solid fa-map ml-2 w-5"></i> خريطة المجموعات</a><a href="#" onclick="window.showSection('teacherHonorRoll'); window.toggleSidebar();" class="sidebar-link"><i class="fa-solid fa-medal ml-2 w-5"></i> لوحة الشرف</a><a href="#" onclick="window.showSection('teacherAcademic'); window.toggleSidebar();" class="sidebar-link"><i class="fa-solid fa-graduation-cap ml-2 w-5"></i> التقييم الأكاديمي</a><a href="#" onclick="window.showSection('teacherFullReport'); window.toggleSidebar();" class="sidebar-link"><i class="fa-solid fa-file-signature ml-2 w-5"></i> التقرير الشامل</a>`;
     }
 };
@@ -160,7 +173,8 @@ window.handleLogin = function() {
   if(email === 'admin@school.com' && pass === '123') { 
       currentRole = 'admin'; currentUser = { id: 'admin_sys', name: 'المدير' };
       document.body.classList.remove('role-teacher'); document.getElementById('roleDisplay').innerHTML = '<i class="fa-solid fa-user-shield"></i> آدمن (رئيسي)'; 
-      window.startApp(); return; 
+      localStorage.setItem('school_session', JSON.stringify({ role: currentRole, user: currentUser, timestamp: Date.now() }));
+      window.startApp(false); return; 
   } 
   
   const userEntry = Object.entries(teachersData).find(([k, t]) => t.email === email && t.password === pass);
@@ -169,28 +183,27 @@ window.handleLogin = function() {
     if(userData.role === 'admin') { 
         currentRole = 'admin'; currentUser = { id: userId, ...userData }; 
         document.body.classList.remove('role-teacher'); document.getElementById('roleDisplay').innerHTML = `<i class="fa-solid fa-user-shield"></i> إداري: ${currentUser.name}`; 
-        window.startApp(); 
     } else { 
         currentRole = 'teacher'; currentUser = { id: userId, ...userData }; 
         document.body.classList.add('role-teacher'); document.getElementById('roleDisplay').innerHTML = `<i class="fa-solid fa-chalkboard-user"></i> أ. ${currentUser.name}`; 
-        window.startApp(); 
     }
+    localStorage.setItem('school_session', JSON.stringify({ role: currentRole, user: currentUser, timestamp: Date.now() }));
+    window.startApp(false);
   } else { alert("بيانات الدخول غير صحيحة!"); }
 };
 
-window.startApp = function() {
+window.startApp = function(isAutoLogin = false) {
   document.getElementById('loginScreen').classList.add('hidden'); document.getElementById('mainApp').classList.remove('hidden'); 
   if(currentRole === 'admin') { 
       document.getElementById('adminNav').classList.remove('hidden'); document.getElementById('adminNav').classList.add('lg:flex'); 
       window.populateSidebarMenu();
-      window.showSection('dashboard'); 
+      if(!isAutoLogin) window.showSection('dashboard'); 
   } 
   else {
       document.getElementById('teacherNav').classList.remove('hidden'); document.getElementById('teacherNav').classList.add('lg:flex');
       const sel = document.getElementById('teacherClassSelect'); 
       if(sel && currentUser.classes) { 
           sel.innerHTML = currentUser.classes.map((c, i) => `<option value="${i}">${c.grade} - ف${c.class}</option>`).join(''); 
-          // مزامنة التغيير بين الجوال والكمبيوتر
           sel.addEventListener('change', (e) => {
               const mobSel = document.getElementById('mobileTeacherClassSelect');
               if(mobSel) mobSel.value = e.target.value;
@@ -198,12 +211,12 @@ window.startApp = function() {
           });
       }
       const d1 = document.getElementById('dailyDateInput'); if(d1) d1.value = selectedDailyDate; const d2 = document.getElementById('mapDateInput'); if(d2) d2.value = selectedDailyDate;
-      window.populateSidebarMenu(); // استدعاء بعد إعداد قائمة الديسكتوب
-      window.showSection('teacherDaily');
+      window.populateSidebarMenu(); 
+      if(!isAutoLogin) window.showSection('teacherDaily');
   }
 };
 
-window.handleLogout = function() { location.reload(); };
+window.handleLogout = function() { localStorage.removeItem('school_session'); location.reload(); };
 window.closeModal = function(id) { const el = document.getElementById(id); if(el){ el.classList.add('hidden'); el.classList.remove('flex');} };
 window.openModal = function(id) { const el = document.getElementById(id); if(el){ el.classList.remove('hidden'); el.classList.add('flex');} };
 window.escapeHtml = function(str) { return String(str||"").replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); };
@@ -390,11 +403,24 @@ window.deleteTeacher = async function(id) { if(confirm("هل أنت متأكد �
 let currentSeatingClassAdmin = "1";
 window.renderSeatingClassButtons = function() { const cont = document.getElementById("classButtonsContainer"); if(cont) cont.innerHTML = ALL_CLASSES.map(c => `<button type="button" onclick="window.setSeatingClass('${c}')" class="px-4 py-2 border rounded font-bold ${currentSeatingClassAdmin===c ? 'bg-purple-900 text-white' : 'bg-white'}">فصل ${c}</button>`).join(""); };
 window.setSeatingClass = function(c) { currentSeatingClassAdmin = c; window.renderSeatingClassButtons(); window.renderSeating(); };
+
+// ==========================================
+// التعديل: ضغط مسافات الخريطة العلوية والسفلية
+// ==========================================
 window.renderSeating = function() {
   const g = document.getElementById("seatingGrade").value, c = currentSeatingClassAdmin; 
   const arr = Object.entries(studentsData).filter(x => x[1].grade === g && String(x[1].class) === String(c)).sort(window.sortArabicAlphabetically);
   const grid = document.getElementById("seatingGrid"); if(!grid) return; grid.innerHTML = "";
-  const groupPositions = [ "top: 90px; left: 70px; transform: rotate(45deg);", "top: 90px; right: 70px; transform: rotate(-45deg);", "bottom: 90px; left: 70px; transform: rotate(45deg);", "bottom: 90px; right: 70px; transform: rotate(-45deg);", "top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(0deg);" ];
+  
+  // قللنا المسافات من 90px إلى 20px من الحواف
+  const groupPositions = [ 
+      "top: 20px; left: 20px; transform: rotate(45deg);", 
+      "top: 20px; right: 20px; transform: rotate(-45deg);", 
+      "bottom: 20px; left: 20px; transform: rotate(45deg);", 
+      "bottom: 20px; right: 20px; transform: rotate(-45deg);", 
+      "top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(0deg);" 
+  ];
+
   for (let i = 1; i <= 5; i++) {
     const gStudents = arr.filter(x => x[1].groupNum === i); let rows = ["", "", ""];
     for (let seat = 1; seat <= 5; seat++) {
@@ -503,6 +529,9 @@ window.generateHonorRollReport = function() {
   document.getElementById("reportOutput").innerHTML = html; 
 };
 
+// ==========================================
+// التعديل: إزالة شرط الإخفاء وعرض جميع الطلاب بالتقرير الإداري
+// ==========================================
 window.generateDailyTrackingAdminReport = function(isUpdate = false) {
   const f = window.getAdminReportFilters(); let dateFrom = ""; let dateTo = ""; let subjFilter = "";
   if(isUpdate) { dateFrom = document.getElementById("repDailyFrom")?.value || ""; dateTo = document.getElementById("repDailyTo")?.value || ""; subjFilter = document.getElementById("repDailySubj")?.value || ""; }
@@ -517,15 +546,17 @@ window.generateDailyTrackingAdminReport = function(isUpdate = false) {
   html += `<div class="flex flex-wrap gap-3 mb-4 bg-blue-50 p-3 rounded-xl border border-blue-100 no-print"><div class="flex-1 min-w-[150px]"><label class="text-xs font-bold text-gray-500 mb-1 block">من تاريخ:</label><input type="date" id="repDailyFrom" value="${dateFrom}" onchange="window.generateDailyTrackingAdminReport(true)" class="w-full border p-2 rounded outline-none font-bold text-sm"></div><div class="flex-1 min-w-[150px]"><label class="text-xs font-bold text-gray-500 mb-1 block">إلى تاريخ:</label><input type="date" id="repDailyTo" value="${dateTo}" onchange="window.generateDailyTrackingAdminReport(true)" class="w-full border p-2 rounded outline-none font-bold text-sm"></div><div class="flex-1 min-w-[150px]"><label class="text-xs font-bold text-gray-500 mb-1 block">تحديد المادة:</label><select id="repDailySubj" onchange="window.generateDailyTrackingAdminReport(true)" class="w-full border p-2 rounded outline-none font-bold text-sm text-purple-700"><option value="">جميع المواد</option><option value="رياضيات" ${subjFilter==='رياضيات'?'selected':''}>رياضيات</option><option value="علوم" ${subjFilter==='علوم'?'selected':''}>علوم</option><option value="لغتي" ${subjFilter==='لغتي'?'selected':''}>لغتي</option><option value="إنجليزي" ${subjFilter==='إنجليزي'?'selected':''}>إنجليزي</option></select></div></div>`;
   html += `<div class="overflow-x-auto"><table class="w-full text-sm text-center border-collapse"><thead class="bg-gray-100 font-bold"><tr><th class="p-2 border">الطالب</th><th class="p-2 border text-green-600">المشاركات</th><th class="p-2 border text-blue-600">واجب تم</th><th class="p-2 border text-orange-600">واجب ناقص</th><th class="p-2 border text-red-600">غياب (-1)</th><th class="p-2 border text-yellow-600">تأخر (-1)</th><th class="p-2 border text-red-800">مخالفات</th><th class="p-2 border">الصافي (XP)</th></tr></thead><tbody>`;
   const filteredStudents = Object.entries(studentsData).filter(([k, s]) => (!f.g || s.grade === f.g) && (!f.c || String(s.class) === String(f.c))).sort(window.sortArabicAlphabetically);
-  let hasData = false;
-  filteredStudents.forEach(([k, s]) => {
-    const stat = stdStats[k] || { xp:0, abs:0, tardies:0, missedHw:0, doneHw:0, parts:0, behs:0 };
-    if(stat.parts !== 0 || stat.doneHw !== 0 || stat.missedHw !== 0 || stat.abs !== 0 || stat.tardies !== 0 || stat.behs !== 0) { 
-      hasData = true;
-      html += `<tr class="hover:bg-gray-50"><td class="p-2 border font-bold text-right">${s.name} <span class="text-[10px] text-gray-400">(${s.grade}-ف${s.class})</span></td><td class="p-2 border font-black">${stat.parts}</td><td class="p-2 border font-black">${stat.doneHw}</td><td class="p-2 border font-black">${stat.missedHw}</td><td class="p-2 border font-black text-red-500">${stat.abs}</td><td class="p-2 border font-black text-yellow-600">${stat.tardies}</td><td class="p-2 border font-black text-red-800">${stat.behs}</td><td class="p-2 border font-black" dir="ltr">${stat.xp}</td></tr>`;
-    }
-  });
-  if(!hasData) html += `<tr><td colspan="8" class="p-4 text-center text-gray-500 font-bold">لا توجد سجلات مطابقة لهذه الفترة/المادة</td></tr>`; html += `</tbody></table></div>`;
+  
+  if(filteredStudents.length === 0) {
+      html += `<tr><td colspan="8" class="p-4 text-center text-gray-500 font-bold">لا يوجد طلاب في هذا الفصل/الصف</td></tr>`;
+  } else {
+      filteredStudents.forEach(([k, s]) => {
+        const stat = stdStats[k] || { xp:0, abs:0, tardies:0, missedHw:0, doneHw:0, parts:0, behs:0 };
+        // إزالة شرط الإخفاء، سيظهر الجميع حتى لو أصفار
+        html += `<tr class="hover:bg-gray-50"><td class="p-2 border font-bold text-right">${s.name} <span class="text-[10px] text-gray-400">(${s.grade}-ف${s.class})</span></td><td class="p-2 border font-black">${stat.parts}</td><td class="p-2 border font-black">${stat.doneHw}</td><td class="p-2 border font-black">${stat.missedHw}</td><td class="p-2 border font-black text-red-500">${stat.abs}</td><td class="p-2 border font-black text-yellow-600">${stat.tardies}</td><td class="p-2 border font-black text-red-800">${stat.behs}</td><td class="p-2 border font-black" dir="ltr">${stat.xp}</td></tr>`;
+      });
+  }
+  html += `</tbody></table></div>`;
   document.getElementById("reportOutput").innerHTML = html;
 };
 
@@ -604,6 +635,9 @@ window.saveTeacherLevel = async function(e) {
   if(studentsData[stdKey]) { await database.ref(`students/${stdKey}/levels/${subj}`).set(newLvl); window.closeModal("teacherLevelModal"); }
 };
 
+// ==========================================
+// التعديل: تقريب مجموعات الخريطة للمعلم
+// ==========================================
 window.renderTeacherViews = function() {
   const sel = document.getElementById('teacherClassSelect'); if(!sel || sel.options.length === 0) return; const activeCls = currentUser.classes[sel.value];
   const subj = currentUser.subject || "عام";
@@ -626,7 +660,16 @@ window.renderTeacherViews = function() {
   const mapGrid = document.getElementById("teacherSeatingGrid");
   if(mapGrid) {
     mapGrid.innerHTML = "";
-    const groupPositions = [ "top: 90px; left: 70px; transform: rotate(45deg);", "top: 90px; right: 70px; transform: rotate(-45deg);", "bottom: 90px; left: 70px; transform: rotate(45deg);", "bottom: 90px; right: 70px; transform: rotate(-45deg);", "top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(0deg);" ];
+    
+    // قللنا المسافات لتصغير الارتفاع وتناسب شاشات الديسكتوب
+    const groupPositions = [ 
+      "top: 20px; left: 20px; transform: rotate(45deg);", 
+      "top: 20px; right: 20px; transform: rotate(-45deg);", 
+      "bottom: 20px; left: 20px; transform: rotate(45deg);", 
+      "bottom: 20px; right: 20px; transform: rotate(-45deg);", 
+      "top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(0deg);" 
+    ];
+
     for (let i = 1; i <= 5; i++) {
       const gStudents = clsStudents.filter(x => x[1].groupNum === i); let rows = ["", "", ""];
       for (let seat = 1; seat <= 5; seat++) {
@@ -686,6 +729,9 @@ window.openSwapModalTeacher = function(k, event) {
   arr.forEach(x => sel.innerHTML+=`<option value="${x[0]}">${window.escapeHtml(x[1].name)}</option>`); window.openModal("swapModal");
 };
 
+// ==========================================
+// التعديل: إزالة شرط الإخفاء في التقرير الشامل للمعلم
+// ==========================================
 window.generateTeacherFullReport = function(isUpdate = false) {
   const sel = document.getElementById('teacherClassSelect'); if(!sel || sel.options.length === 0) return; const activeCls = currentUser.classes[sel.value];
   const subj = currentUser.subject || "عام";
@@ -693,15 +739,24 @@ window.generateTeacherFullReport = function(isUpdate = false) {
   let dateFrom = ""; let dateTo = ""; if(isUpdate) { dateFrom = document.getElementById("tchRepFrom")?.value || ""; dateTo = document.getElementById("tchRepTo")?.value || ""; }
   let html = `<div class="flex flex-wrap gap-3 mb-4 bg-purple-50 p-3 rounded-xl border border-purple-100 no-print"><div class="flex-1 min-w-[150px]"><label class="text-xs font-bold text-gray-500 mb-1 block">من تاريخ:</label><input type="date" id="tchRepFrom" value="${dateFrom}" onchange="window.generateTeacherFullReport(true)" class="w-full border p-2 rounded outline-none font-bold text-sm"></div><div class="flex-1 min-w-[150px]"><label class="text-xs font-bold text-gray-500 mb-1 block">إلى تاريخ:</label><input type="date" id="tchRepTo" value="${dateTo}" onchange="window.generateTeacherFullReport(true)" class="w-full border p-2 rounded outline-none font-bold text-sm"></div></div>`;
   html += `<table class="w-full text-sm text-center border-collapse"><thead class="bg-gray-100 font-bold border-b-2"><tr><th class="p-3 border">اسم الطالب</th><th class="p-3 border text-green-700">المشاركات (+1)</th><th class="p-3 border text-blue-700">واجبات محلولة</th><th class="p-3 border text-orange-600">واجبات مفقودة</th><th class="p-3 border text-red-700">غياب (-1)</th><th class="p-3 border text-yellow-600">تأخر (-1)</th><th class="p-3 border text-red-900">مخالفات (-1)</th><th class="p-3 border">الصافي (XP)</th></tr></thead><tbody>`;
-  let hasData = false;
-  clsStudents.forEach(([k, s]) => {
-    const stdRecords = dailyRecords.filter(r => { if(r.stdKey !== k || r.subject !== subj) return false; if(dateFrom && r.date < dateFrom) return false; if(dateTo && r.date > dateTo) return false; return true; });
-    if(!isUpdate || stdRecords.length > 0) { 
-       hasData = true; let xp = 0; stdRecords.forEach(r => xp += r.points); const parts = stdRecords.filter(r => r.type === 'participation').length; const hwDone = stdRecords.filter(r => r.type === 'homework' && r.points > 0).length; const hwMissed = stdRecords.filter(r => r.type === 'homework' && r.points < 0).length; const abs = stdRecords.filter(r => r.type === 'attendance').length; const tardies = stdRecords.filter(r => r.type === 'tardy').length; const behs = stdRecords.filter(r => r.type === 'behavior').length;
-       html += `<tr class="border-b hover:bg-gray-50"><td class="p-3 border font-bold text-right">${window.escapeHtml(s.name)}</td><td class="p-3 border font-black">${parts}</td><td class="p-3 border font-black">${hwDone}</td><td class="p-3 border font-black">${hwMissed}</td><td class="p-3 border font-black text-red-500">${abs}</td><td class="p-3 border font-black text-yellow-600">${tardies}</td><td class="p-3 border font-black text-red-800">${behs}</td><td class="p-3 border font-black" dir="ltr">${xp}</td></tr>`;
-    }
-  });
-  if(!hasData) html += `<tr><td colspan="8" class="p-4 text-center text-gray-500 font-bold">لا توجد سجلات مطابقة لهذه الفترة</td></tr>`; html += `</tbody></table>`; document.getElementById("teacherReportOutput").innerHTML = html;
+  
+  if(clsStudents.length === 0) {
+      html += `<tr><td colspan="8" class="p-4 text-center text-gray-500 font-bold">لا يوجد طلاب مسجلين في هذا الفصل</td></tr>`;
+  } else {
+      clsStudents.forEach(([k, s]) => {
+        const stdRecords = dailyRecords.filter(r => { if(r.stdKey !== k || r.subject !== subj) return false; if(dateFrom && r.date < dateFrom) return false; if(dateTo && r.date > dateTo) return false; return true; });
+        // إظهار الطالب دائماً بدون شروط
+        let xp = 0; stdRecords.forEach(r => xp += r.points); 
+        const parts = stdRecords.filter(r => r.type === 'participation').length; 
+        const hwDone = stdRecords.filter(r => r.type === 'homework' && r.points > 0).length; 
+        const hwMissed = stdRecords.filter(r => r.type === 'homework' && r.points < 0).length; 
+        const abs = stdRecords.filter(r => r.type === 'attendance').length; 
+        const tardies = stdRecords.filter(r => r.type === 'tardy').length; 
+        const behs = stdRecords.filter(r => r.type === 'behavior').length;
+        html += `<tr class="border-b hover:bg-gray-50"><td class="p-3 border font-bold text-right">${window.escapeHtml(s.name)}</td><td class="p-3 border font-black">${parts}</td><td class="p-3 border font-black">${hwDone}</td><td class="p-3 border font-black">${hwMissed}</td><td class="p-3 border font-black text-red-500">${abs}</td><td class="p-3 border font-black text-yellow-600">${tardies}</td><td class="p-3 border font-black text-red-800">${behs}</td><td class="p-3 border font-black" dir="ltr">${xp}</td></tr>`;
+      });
+  }
+  html += `</tbody></table>`; document.getElementById("teacherReportOutput").innerHTML = html;
 };
 
 window.openStudentTracker = function(stdKey) {
