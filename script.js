@@ -1,5 +1,5 @@
 /* =========================================
-   SCRIPT.JS - النسخة الاحترافية (إصلاح التقارير وتصغير الخريطة)
+   SCRIPT.JS - النسخة الذهبية الشاملة (جميع التحديثات والإصلاحات)
    ========================================= */
 
 const firebaseConfig = {
@@ -24,7 +24,7 @@ let selectedDailyDate = new Date().toISOString().split("T")[0];
 let currentRole = null; let currentUser = null; 
 
 // ==========================================
-// 🔐 نظام الجلسات الذكي
+// 🔐 نظام الجلسات الذكي (8 ساعات)
 // ==========================================
 const SESSION_DURATION = 8 * 60 * 60 * 1000; 
 
@@ -72,6 +72,7 @@ document.addEventListener('keypress', function (e) { if (e.key === 'Enter') wind
 database.ref('/').on('value', (snapshot) => {
     const data = snapshot.val() || {};
     
+    // فلتر الأمان لتنظيف البيانات من الفجوات
     const cleanObj = (obj) => {
         let res = {};
         if (obj) { Object.keys(obj).forEach(k => { if (obj[k] !== null && obj[k] !== undefined) res[k] = obj[k]; }); }
@@ -405,17 +406,16 @@ window.renderSeatingClassButtons = function() { const cont = document.getElement
 window.setSeatingClass = function(c) { currentSeatingClassAdmin = c; window.renderSeatingClassButtons(); window.renderSeating(); };
 
 // ==========================================
-// التعديل: ضغط مسافات الخريطة العلوية والسفلية
+// 🏫 خريطة الآدمن (مع إنزال المجموعات العلوية بمقدار 100px)
 // ==========================================
 window.renderSeating = function() {
   const g = document.getElementById("seatingGrade").value, c = currentSeatingClassAdmin; 
   const arr = Object.entries(studentsData).filter(x => x[1].grade === g && String(x[1].class) === String(c)).sort(window.sortArabicAlphabetically);
   const grid = document.getElementById("seatingGrid"); if(!grid) return; grid.innerHTML = "";
   
-  // قللنا المسافات من 90px إلى 20px من الحواف
   const groupPositions = [ 
-      "top: 20px; left: 20px; transform: rotate(45deg);", 
-      "top: 20px; right: 20px; transform: rotate(-45deg);", 
+      "top: 100px; left: 20px; transform: rotate(45deg);", 
+      "top: 100px; right: 20px; transform: rotate(-45deg);", 
       "bottom: 20px; left: 20px; transform: rotate(45deg);", 
       "bottom: 20px; right: 20px; transform: rotate(-45deg);", 
       "top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(0deg);" 
@@ -530,7 +530,7 @@ window.generateHonorRollReport = function() {
 };
 
 // ==========================================
-// التعديل: إزالة شرط الإخفاء وعرض جميع الطلاب بالتقرير الإداري
+// التقرير الإداري: إظهار جميع الطلاب حتى لو أرصدتهم أصفار
 // ==========================================
 window.generateDailyTrackingAdminReport = function(isUpdate = false) {
   const f = window.getAdminReportFilters(); let dateFrom = ""; let dateTo = ""; let subjFilter = "";
@@ -552,7 +552,6 @@ window.generateDailyTrackingAdminReport = function(isUpdate = false) {
   } else {
       filteredStudents.forEach(([k, s]) => {
         const stat = stdStats[k] || { xp:0, abs:0, tardies:0, missedHw:0, doneHw:0, parts:0, behs:0 };
-        // إزالة شرط الإخفاء، سيظهر الجميع حتى لو أصفار
         html += `<tr class="hover:bg-gray-50"><td class="p-2 border font-bold text-right">${s.name} <span class="text-[10px] text-gray-400">(${s.grade}-ف${s.class})</span></td><td class="p-2 border font-black">${stat.parts}</td><td class="p-2 border font-black">${stat.doneHw}</td><td class="p-2 border font-black">${stat.missedHw}</td><td class="p-2 border font-black text-red-500">${stat.abs}</td><td class="p-2 border font-black text-yellow-600">${stat.tardies}</td><td class="p-2 border font-black text-red-800">${stat.behs}</td><td class="p-2 border font-black" dir="ltr">${stat.xp}</td></tr>`;
       });
   }
@@ -636,7 +635,7 @@ window.saveTeacherLevel = async function(e) {
 };
 
 // ==========================================
-// التعديل: تقريب مجموعات الخريطة للمعلم
+// 🏫 خريطة المعلم (مع إنزال المجموعات العلوية بمقدار 100px)
 // ==========================================
 window.renderTeacherViews = function() {
   const sel = document.getElementById('teacherClassSelect'); if(!sel || sel.options.length === 0) return; const activeCls = currentUser.classes[sel.value];
@@ -661,10 +660,10 @@ window.renderTeacherViews = function() {
   if(mapGrid) {
     mapGrid.innerHTML = "";
     
-    // قللنا المسافات لتصغير الارتفاع وتناسب شاشات الديسكتوب
+    // المجموعتين العلويتين تم إنزالهما لمسافة top: 100px
     const groupPositions = [ 
-      "top: 20px; left: 20px; transform: rotate(45deg);", 
-      "top: 20px; right: 20px; transform: rotate(-45deg);", 
+      "top: 100px; left: 20px; transform: rotate(45deg);", 
+      "top: 100px; right: 20px; transform: rotate(-45deg);", 
       "bottom: 20px; left: 20px; transform: rotate(45deg);", 
       "bottom: 20px; right: 20px; transform: rotate(-45deg);", 
       "top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(0deg);" 
@@ -730,7 +729,7 @@ window.openSwapModalTeacher = function(k, event) {
 };
 
 // ==========================================
-// التعديل: إزالة شرط الإخفاء في التقرير الشامل للمعلم
+// التقرير الشامل للمعلم: إظهار جميع الطلاب حتى لو أرصدتهم أصفار
 // ==========================================
 window.generateTeacherFullReport = function(isUpdate = false) {
   const sel = document.getElementById('teacherClassSelect'); if(!sel || sel.options.length === 0) return; const activeCls = currentUser.classes[sel.value];
