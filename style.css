@@ -66,110 +66,63 @@ body { background: var(--bg); color: #1f2937; overflow-x: hidden; }
 table { min-width: 1100px; }
 .mini-subj { width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; font-size: 10px; font-weight: 900; }
 
-/* ==============================================
-   حل مشاكل الطباعة الجذري - النسخة المحصنة 100%
-   ============================================== */
-@media print { 
-  * { 
-      -webkit-print-color-adjust: exact !important; 
-      print-color-adjust: exact !important; 
-      transition: none !important;
-      animation: none !important;
-  }
-  
-  /* مقاس ورقة A4 بالعرض مع هوامش صفرية لمنع الصفحات الفارغة */
-  @page { size: A4 landscape; margin: 0; }
-  
-  html, body, main { 
-      background: white !important; 
-      margin: 0 !important; 
-      padding: 0 !important;
-      width: 100% !important;
-      height: 100% !important;
-      overflow: visible !important;
-  }
-  
-  /* إخفاء تام لكل ما لا يلزم طباعته */
-  header, nav, #loginScreen, #mobileSidebar, #sidebarOverlay, .no-print, .modal-bg { display: none !important; }
-  
-  .hidden-section { display: none !important; }
-  
-  .card { box-shadow: none !important; border: 1px solid #ccc !important; margin: 0 !important; padding: 10px !important; }
-  table { border-collapse: collapse !important; width: 100% !important; min-width: 100% !important; page-break-inside: auto; }
-  tr { page-break-inside: avoid; page-break-after: auto; }
-  th, td { border: 1px solid #ddd !important; padding: 4px !important; font-size: 12pt !important; }
-  .table-wrap { overflow: visible !important; width: 100% !important; }
-
-  /* الخريطة: الطباعة بحجمها الطبيعي 100% بدون أي Zoom لتجنب تخريب الـ Rotate */
-  .classroom-container { 
-      overflow: visible !important; 
-      display: flex !important; 
-      justify-content: center !important; 
-      padding: 0 !important; 
-      margin: 0 !important; 
-      width: 100% !important;
-  }
-  
-  .classroom-layout { 
-      width: 1100px !important; 
-      min-width: 1100px !important; 
-      height: 880px !important;
-      border: 2px solid black !important; 
-      margin: 0 auto !important; 
-      position: relative !important;
-      /* أزلنا الـ zoom والـ transform هنا */
-      transform: none !important;
-      zoom: 1 !important;
-  }
-  
-  /* إجبار المجموعات (Absolute) على الاحتفاظ بإحداثياتها والدوران (Rotate) في الطباعة */
-  .absolute { position: absolute !important; }
-  .classroom-layout > div.absolute {
-      /* إجبار المتصفح على طباعة الـ Transform كما هو في الشاشة */
-      -webkit-transform-style: preserve-3d !important;
-      transform-style: preserve-3d !important;
-  }
-
-  ::-webkit-scrollbar { display: none; }
-}
 /* =========================================
-   تعديلات الطباعة الذكية (حفظ أماكن المجموعات وإظهار الأسماء)
+   إعدادات الطباعة الموزونة (الحجم الطبيعي في صفحة واحدة)
    ========================================= */
 @media print {
-    /* 1. إخفاء القوائم والأزرار الإدارية فقط (حذفنا كلمة button العامة لكي لا تختفي أسماء الطلاب) */
-    .no-print, nav, .sidebar-link, #mobileSidebar, #sidebarOverlay {
+    /* 1. توجيه الورقة بالعرض (Landscape) لتناسب أبعاد الفصل ومنع الهوامش الزائدة */
+    @page {
+        size: A4 landscape;
+        margin: 5mm;
+    }
+
+    /* 2. قفل ارتفاع الصفحة لمنع نزول أي جزء لصفحة ثانية */
+    html, body {
+        width: 100% !important;
+        height: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: hidden !important;
+        background: #fff !important;
+    }
+
+    /* 3. إخفاء القوائم العلوية والجانبية وأزرار التحكم غير المخصصة للطباعة */
+    .no-print, nav, header, .sidebar-link, #mobileSidebar, #sidebarOverlay {
         display: none !important;
     }
-    
-    /* 2. ضمان ظهور أسماء الطلاب داخل المقاعد بوضوح تام */
+
+    /* 4. إظهار أسماء الطلاب وبياناتهم داخل المقاعد بوضوح */
     .seat-pill button {
         display: flex !important;
         visibility: visible !important;
     }
-    
-    /* إخفاء زر التبديل الصغير والمقاعد الفارغة عند الطباعة */
+
+    /* إخفاء أزرار التبديل والمقاعد الفارغة فقط */
     .seat-pill button.no-print, .seat-empty.no-print {
         display: none !important;
     }
 
-    /* 3. توسيع حاوية الطباعة */
+    /* 5. وزن حاوية الفصل بالكامل لتملأ الصفحة الواحدة دون قص */
     .printableArea {
         width: 100% !important;
-        margin: 0 !important;
+        max-width: 100% !important;
+        margin: 0 auto !important;
         padding: 0 !important;
-    }
-    
-    /* 4. الحفاظ على الأماكن الحقيقية للمجموعات وبعدها عن السبورة */
-    #seatingGrid, #teacherSeatingGrid {
-        height: 780px !important; /* الحفاظ على الارتفاع الأصلي لكي لا تصعد المجموعات للأعلى */
-        margin-top: 15px !important; /* ترك مسافة مريحة تحت السبورة */
-        margin-bottom: -200px !important; /* قص الفراغ السفلي فقط لتدخل في ورقة واحدة */
-        transform: scale(0.72) !important;
-        transform-origin: top center !important;
+        box-shadow: none !important;
+        zoom: 85%; /* موازنة الكل ككتلة واحدة ليدخل في ورقة واحدة */
+        page-break-after: avoid !important;
+        page-break-before: avoid !important;
         page-break-inside: avoid !important;
     }
-    
-    /* 5. إجبار الطابعة على طباعة الألوان والخلفيات */
+
+    /* 6. إبقاء المجموعات بحجمها ومكانها الطبيعي 100% كما في الشاشة */
+    #seatingGrid, #teacherSeatingGrid {
+        transform: none !important;
+        margin: 0 !important;
+        page-break-inside: avoid !important;
+    }
+
+    /* 7. إجبار الطابعة على إظهار الألوان والحدود بدقة */
     * {
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
