@@ -133,31 +133,43 @@ table { min-width: 1100px; }
   ::-webkit-scrollbar { display: none; }
 }
 /* =========================================
-   تعديلات الطباعة الذكية (Smart Printing)
+   تعديلات الطباعة الذكية (حفظ أماكن المجموعات وإظهار الأسماء)
    ========================================= */
 @media print {
-    /* إخفاء القوائم والأزرار التي لا نحتاجها في الورق */
-    .no-print, nav, .sidebar-link, button, #mobileSidebar, #sidebarOverlay {
+    /* 1. إخفاء القوائم والأزرار الإدارية فقط (حذفنا كلمة button العامة لكي لا تختفي أسماء الطلاب) */
+    .no-print, nav, .sidebar-link, #mobileSidebar, #sidebarOverlay {
         display: none !important;
     }
     
-    /* توسيع حاوية الطباعة لتأخذ حجم الورقة بالكامل */
+    /* 2. ضمان ظهور أسماء الطلاب داخل المقاعد بوضوح تام */
+    .seat-pill button {
+        display: flex !important;
+        visibility: visible !important;
+    }
+    
+    /* إخفاء زر التبديل الصغير والمقاعد الفارغة عند الطباعة */
+    .seat-pill button.no-print, .seat-empty.no-print {
+        display: none !important;
+    }
+
+    /* 3. توسيع حاوية الطباعة */
     .printableArea {
         width: 100% !important;
         margin: 0 !important;
         padding: 0 !important;
     }
     
-    /* السحر الحقيقي: تصغير خريطة المجموعات لتدخل في صفحة واحدة A4 */
+    /* 4. الحفاظ على الأماكن الحقيقية للمجموعات وبعدها عن السبورة */
     #seatingGrid, #teacherSeatingGrid {
-        transform: scale(0.65) !important;
+        height: 780px !important; /* الحفاظ على الارتفاع الأصلي لكي لا تصعد المجموعات للأعلى */
+        margin-top: 15px !important; /* ترك مسافة مريحة تحت السبورة */
+        margin-bottom: -200px !important; /* قص الفراغ السفلي فقط لتدخل في ورقة واحدة */
+        transform: scale(0.72) !important;
         transform-origin: top center !important;
-        height: 600px !important; /* ضمان عدم ترك مساحة بيضاء طويلة */
-        margin-top: -50px !important;
         page-break-inside: avoid !important;
     }
     
-    /* تلوين الخلفيات حتى في الطباعة */
+    /* 5. إجبار الطابعة على طباعة الألوان والخلفيات */
     * {
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
