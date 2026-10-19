@@ -1,5 +1,5 @@
 /* =========================================
-   SCRIPT.JS - النسخة الذهبية الشاملة (جميع التحديثات والإصلاحات)
+   SCRIPT.JS - النسخة الذهبية الشاملة (ضبط أبعاد الخريطة المركزية)
    ========================================= */
 
 const firebaseConfig = {
@@ -406,7 +406,7 @@ window.renderSeatingClassButtons = function() { const cont = document.getElement
 window.setSeatingClass = function(c) { currentSeatingClassAdmin = c; window.renderSeatingClassButtons(); window.renderSeating(); };
 
 // ==========================================
-// 🏫 خريطة الآدمن (مع إنزال المجموعات العلوية بمقدار 100px)
+// 🏫 خريطة الآدمن (ضبط المسافات 100px من جميع الاتجاهات)
 // ==========================================
 window.renderSeating = function() {
   const g = document.getElementById("seatingGrade").value, c = currentSeatingClassAdmin; 
@@ -414,10 +414,10 @@ window.renderSeating = function() {
   const grid = document.getElementById("seatingGrid"); if(!grid) return; grid.innerHTML = "";
   
   const groupPositions = [ 
-      "top: 100px; left: 20px; transform: rotate(45deg);", 
-      "top: 100px; right: 20px; transform: rotate(-45deg);", 
-      "bottom: 20px; left: 20px; transform: rotate(45deg);", 
-      "bottom: 20px; right: 20px; transform: rotate(-45deg);", 
+      "top: 100px; left: 100px; transform: rotate(45deg);", 
+      "top: 100px; right: 100px; transform: rotate(-45deg);", 
+      "bottom: 100px; left: 100px; transform: rotate(45deg);", 
+      "bottom: 100px; right: 100px; transform: rotate(-45deg);", 
       "top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(0deg);" 
   ];
 
@@ -635,7 +635,7 @@ window.saveTeacherLevel = async function(e) {
 };
 
 // ==========================================
-// 🏫 خريطة المعلم (مع إنزال المجموعات العلوية بمقدار 100px)
+// 🏫 خريطة المعلم (ضبط المسافات 100px من جميع الاتجاهات)
 // ==========================================
 window.renderTeacherViews = function() {
   const sel = document.getElementById('teacherClassSelect'); if(!sel || sel.options.length === 0) return; const activeCls = currentUser.classes[sel.value];
@@ -660,12 +660,12 @@ window.renderTeacherViews = function() {
   if(mapGrid) {
     mapGrid.innerHTML = "";
     
-    // المجموعتين العلويتين تم إنزالهما لمسافة top: 100px
+    // ضبط المسافات 100px من الأعلى والأسفل واليمين واليسار مع ثبات الوسطى
     const groupPositions = [ 
-      "top: 100px; left: 20px; transform: rotate(45deg);", 
-      "top: 100px; right: 20px; transform: rotate(-45deg);", 
-      "bottom: 20px; left: 20px; transform: rotate(45deg);", 
-      "bottom: 20px; right: 20px; transform: rotate(-45deg);", 
+      "top: 100px; left: 100px; transform: rotate(45deg);", 
+      "top: 100px; right: 100px; transform: rotate(-45deg);", 
+      "bottom: 100px; left: 100px; transform: rotate(45deg);", 
+      "bottom: 100px; right: 100px; transform: rotate(-45deg);", 
       "top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(0deg);" 
     ];
 
@@ -744,7 +744,6 @@ window.generateTeacherFullReport = function(isUpdate = false) {
   } else {
       clsStudents.forEach(([k, s]) => {
         const stdRecords = dailyRecords.filter(r => { if(r.stdKey !== k || r.subject !== subj) return false; if(dateFrom && r.date < dateFrom) return false; if(dateTo && r.date > dateTo) return false; return true; });
-        // إظهار الطالب دائماً بدون شروط
         let xp = 0; stdRecords.forEach(r => xp += r.points); 
         const parts = stdRecords.filter(r => r.type === 'participation').length; 
         const hwDone = stdRecords.filter(r => r.type === 'homework' && r.points > 0).length; 
